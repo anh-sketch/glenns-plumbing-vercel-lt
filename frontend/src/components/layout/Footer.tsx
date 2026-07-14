@@ -117,7 +117,7 @@ export function Footer({ variant }: { variant: FooterVariant }) {
           <div>
             © {year} {BIZ.legalName}. All rights reserved.
           </div>
-          <div className="flex items-center gap-5">
+          <div className="flex flex-wrap items-center justify-center gap-x-5 gap-y-2">
             {variant === "home" ? (
               <Link to="/pricing" className="hover:text-white/80 transition-colors">
                 Pricing
@@ -127,20 +127,12 @@ export function Footer({ variant }: { variant: FooterVariant }) {
                 Home
               </Link>
             )}
-            {variant === "service" ? (
-              <Link to="/pricing" className="hover:text-white/80 transition-colors">
-                Pricing
-              </Link>
-            ) : (
-              <>
-                <a href="#" className="hover:text-white/80 transition-colors">
-                  Privacy
-                </a>
-                <a href="#" className="hover:text-white/80 transition-colors">
-                  Terms
-                </a>
-              </>
-            )}
+            <Link to="/privacy" className="hover:text-white/80 transition-colors">
+              Privacy Policy
+            </Link>
+            <Link to="/terms" className="hover:text-white/80 transition-colors">
+              Terms &amp; Conditions
+            </Link>
             <span>Lic# {BIZ.licenseNo}</span>
           </div>
         </div>

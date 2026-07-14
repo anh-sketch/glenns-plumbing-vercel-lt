@@ -60,7 +60,9 @@ const FALLBACK_ERROR = `Something went wrong. Please call us at ${BIZ.phone} or 
 const fieldBase =
   "w-full rounded-xl border bg-white px-4 py-3.5 text-[15px] text-navy placeholder:text-muted/60 outline-none transition-colors focus:border-blue focus:ring-4 focus:ring-blue/10";
 
-type Errors = Partial<Record<"name" | "phone" | "email" | "address" | "service" | "message", string>>;
+type Errors = Partial<
+  Record<"name" | "phone" | "email" | "address" | "service" | "message" | "consent", string>
+>;
 
 const US_STATES = [
   { code: "AL", name: "Alabama" }, { code: "AK", name: "Alaska" },
@@ -118,6 +120,7 @@ export function BookForm({
   };
   const [form, setForm] = useState(initial);
   const [company, setCompany] = useState(""); // honeypot — humans never see it
+  const [consent, setConsent] = useState(false); // SMS opt-in — unchecked by default (A2P)
   const [errors, setErrors] = useState<Errors>({});
   const [serverError, setServerError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
@@ -153,6 +156,7 @@ export function BookForm({
     const er: Errors = {};
     if (!form.name.trim()) er.name = "Please enter your name";
     if (!/[0-9]{7,}/.test(form.phone.replace(/\D/g, ""))) er.phone = "Enter a valid phone number";
+    if (!consent) er.consent = "Please agree to receive text messages to continue";
     return er;
   };
 
@@ -306,6 +310,7 @@ export function BookForm({
                         setSent(false);
                         setForm(initial);
                         setCompany("");
+                        setConsent(false);
                         setServerError(null);
                       }}
                       className="btn inline-flex items-center gap-2 px-5 py-3 rounded-xl border border-line font-bold text-navy hover:border-blue/40"
@@ -502,10 +507,54 @@ export function BookForm({
                     </label>
                   </div>
 
+                  {/* SMS opt-in — required, unchecked by default (Twilio A2P 10DLC compliance) */}
+                  <div className="mt-6 flex items-start gap-3">
+                    <input
+                      id="sms-consent"
+                      type="checkbox"
+                      checked={consent}
+                      onChange={(e) => {
+                        setConsent(e.target.checked);
+                        setErrors((er) => ({ ...er, consent: undefined }));
+                      }}
+                      aria-invalid={errors.consent ? true : undefined}
+                      className="mt-0.5 h-[18px] w-[18px] shrink-0 cursor-pointer rounded border-line accent-blue focus:outline-none focus:ring-4 focus:ring-blue/15"
+                    />
+                    <label htmlFor="sms-consent" className="text-[12.5px] leading-relaxed text-muted cursor-pointer">
+                      By checking this box, I agree to receive text messages from {BIZ.name} at the
+                      phone number provided about my request, quotes, and appointment updates. Message
+                      frequency varies. Message &amp; data rates may apply. Reply STOP to unsubscribe or
+                      HELP for help. Consent is not a condition of purchase. See our{" "}
+                      <a
+                        href="/privacy"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        onClick={(e) => e.stopPropagation()}
+                        className="font-semibold text-blue hover:text-blue-deep underline underline-offset-2"
+                      >
+                        Privacy Policy
+                      </a>{" "}
+                      &amp;{" "}
+                      <a
+                        href="/terms"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        onClick={(e) => e.stopPropagation()}
+                        className="font-semibold text-blue hover:text-blue-deep underline underline-offset-2"
+                      >
+                        Terms &amp; Conditions
+                      </a>
+                      .
+                    </label>
+                  </div>
+                  {errors.consent && (
+                    <p className="mt-1.5 text-[12.5px] font-semibold text-red-500">{errors.consent}</p>
+                  )}
+
                   <button
                     type="submit"
                     disabled={submitting}
-                    className="btn sheen mt-6 w-full inline-flex items-center justify-center gap-2 px-6 py-4 rounded-2xl bg-blue text-white font-bold text-[17px] shadow-soft hover:bg-blue-deep hover:shadow-lift disabled:opacity-60"
+                    className="btn sheen mt-5 w-full inline-flex items-center justify-center gap-2 px-6 py-4 rounded-2xl bg-blue text-white font-bold text-[17px] shadow-soft hover:bg-blue-deep hover:shadow-lift disabled:opacity-60"
                   >
                     {copy.submit} <Icon name="arrow-right" className="w-5 h-5" />
                   </button>

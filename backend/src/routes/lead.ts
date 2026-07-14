@@ -31,6 +31,14 @@ const leadSchema = z.object({
     .enum(["home", "pricing"])
     .or(z.string().regex(/^service:[a-z-]+$/))
     .default("home"),
+  // SMS opt-in (Twilio A2P / TCPA): the form checkbox is unchecked by default
+  // and required — enforced here too so consent is never assumed for API calls.
+  consent: z
+    .boolean()
+    .optional()
+    .refine((v) => v === true, {
+      message: "Please agree to receive text messages to continue",
+    }),
   company: z.string().max(0).optional(), // honeypot
 });
 
@@ -63,10 +71,13 @@ router.post("/lead", async (req: Request, res: Response) => {
     try {
       await client.query("begin");
 
+      // smsConsent luôn true tại đây (schema đã chặn thiếu consent);
+      // smsConsentAt = now() phía server làm bằng chứng TCPA (không tin client).
       const leadResult = await client.query(
         `insert into leads
-           (name, phone, email, address, service, "serviceSlug", message, source)
-         values ($1, $2, $3, $4, $5, $6, $7, $8)
+           (name, phone, email, address, service, "serviceSlug", message, source,
+            "smsConsent", "smsConsentAt")
+         values ($1, $2, $3, $4, $5, $6, $7, $8, true, now())
          returning id`,
         [name, phone, email || null, address || null, service, serviceSlug, message || null, sourceEnum]
       );

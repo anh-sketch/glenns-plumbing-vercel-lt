@@ -187,6 +187,7 @@ export function BookForm({
               : form.service
             : "Not sure",
           message: form.message,
+          consent, // SMS opt-in — validate() guarantees true; server logs timestamp
           company,
         }),
       });

@@ -12,6 +12,7 @@ router.get("/leads", requireAuth, async (_req: AuthRequest, res: Response) => {
     const result = await query(`
       select id, name, phone, email, address,
              service, source, status, message, notes,
+             "smsConsent", "smsConsentAt",
              "createdAt", "respondedAt", "closedAt"
       from leads
       order by "createdAt" desc

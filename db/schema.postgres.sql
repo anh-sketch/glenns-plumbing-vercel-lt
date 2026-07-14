@@ -30,6 +30,10 @@ create table if not exists leads (
   source        text         not null,                -- HOME | PRICING | SERVICE
   status        text         not null default 'NEW',  -- NEW | CONTACTED | QUOTED | SCHEDULED | DONE | LOST
   notes         text,
+  -- Bằng chứng opt-in SMS (Twilio A2P / TCPA): khách đã tick checkbox consent
+  -- trên form (unchecked mặc định) + thời điểm server ghi nhận.
+  "smsConsent"   boolean     not null default false,
+  "smsConsentAt" timestamptz,
   "createdAt"   timestamptz  not null default now(),
   "respondedAt" timestamptz,
   "closedAt"    timestamptz

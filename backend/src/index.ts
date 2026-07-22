@@ -4,6 +4,7 @@ import cors from "cors";
 import leadRouter from "./routes/lead";
 import authRouter from "./routes/auth";
 import adminRouter from "./routes/admin";
+import trackRouter from "./routes/track";
 
 const app = express();
 const PORT = Number(process.env.PORT ?? 4000);
@@ -20,6 +21,7 @@ app.use(express.json());
 app.get("/health", (_req, res) => res.json({ ok: true }));
 
 app.use("/api", leadRouter);
+app.use("/api", trackRouter); // POST /api/track — behaviour analytics (analytics_events)
 app.use("/api/auth", authRouter);
 app.use("/api/admin", adminRouter);
 

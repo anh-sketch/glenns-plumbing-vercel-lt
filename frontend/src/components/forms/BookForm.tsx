@@ -3,6 +3,7 @@ import { Icon } from "@/components/ui/Icon";
 import { Reveal } from "@/components/ui/Reveal";
 import { BIZ } from "@/lib/biz";
 import { FORM_SELECT, HOME_SERVICES, SECTIONS, SERVICE_DETAILS } from "@/lib/data";
+import { trackQuoteFormStart, trackQuoteFormSubmit } from "@/lib/track";
 
 type Variant = "home" | "pricing" | "service";
 
@@ -108,6 +109,11 @@ export function BookForm({
   source?: string;
 }) {
   const copy = COPY[variant];
+  // Analytics: service pages carry source "service:<slug>" — pass the slug so
+  // funnel events join cleanly against service_page_view rows.
+  const trackSlug = source?.startsWith("service:")
+    ? source.slice("service:".length)
+    : undefined;
   const initial = {
     name: "",
     phone: "",
@@ -196,6 +202,7 @@ export function BookForm({
         .catch(() => null);
       if (res.ok && data?.ok) {
         setSent(true);
+        trackQuoteFormSubmit(trackSlug); // funnel: lead confirmed by the API
       } else if (res.status === 400 && data?.errors) {
         setErrors(data.errors);
       } else {
@@ -321,7 +328,13 @@ export function BookForm({
                   </div>
                 </div>
               ) : (
-                <form onSubmit={submit} noValidate>
+                <form
+                  onSubmit={submit}
+                  noValidate
+                  // funnel: quote_form_start on the first focus of any field
+                  // (idempotent — emits once per page; abandon fires automatically)
+                  onFocusCapture={() => trackQuoteFormStart(trackSlug)}
+                >
                   <h3 className="font-display font-bold text-navy text-[22px]">{copy.formTitle}</h3>
                   <p className="mt-1 text-[14px] text-muted">{copy.formSub}</p>
 

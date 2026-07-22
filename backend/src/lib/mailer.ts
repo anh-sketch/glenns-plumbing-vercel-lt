@@ -109,6 +109,29 @@ export async function sendLeadEmails(lead: LeadEmailData): Promise<void> {
   await Promise.allSettled(tasks);
 }
 
+// Gửi email text thuần tới 1 địa chỉ bất kỳ (dùng để điều phối lead → thợ).
+// Trả true nếu gửi thành công, false nếu chưa cấu hình SMTP hoặc lỗi.
+export async function sendPlainEmail(
+  to: string,
+  subject: string,
+  text: string
+): Promise<boolean> {
+  if (!process.env.SMTP_USER || !process.env.SMTP_PASS) {
+    console.warn("[mailer] SMTP chưa cấu hình — bỏ qua email điều phối.");
+    return false;
+  }
+  const from =
+    process.env.SMTP_FROM ?? `"Glenn's Plumbing NYC" <${process.env.SMTP_USER}>`;
+  try {
+    const info = await transporter.sendMail({ from, to, subject, text });
+    console.log("[mailer] Dispatch email sent:", info.messageId);
+    return true;
+  } catch (err) {
+    console.error("[mailer] Dispatch email error:", err);
+    return false;
+  }
+}
+
 // ─── HTML templates ───────────────────────────────────────────────────────────
 
 // Nút CTA bo tròn (kèm fallback VML cho Outlook). Dùng chung cho cả 2 email.

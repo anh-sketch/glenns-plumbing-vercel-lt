@@ -1,6 +1,8 @@
 import { Router, Response } from "express";
 import { query } from "../db";
 import { requireAuth, AuthRequest } from "../middleware/auth";
+import { sendPlainEmail } from "../lib/mailer";
+import { sendPlainSms } from "../lib/sms";
 
 const router = Router();
 
@@ -36,6 +38,59 @@ router.patch("/leads/:id/status", requireAuth, async (req: AuthRequest, res: Res
     return res.json({ ok: true });
   } catch (err) {
     console.error("[PATCH /api/admin/leads/:id/status]", err);
+    return res.status(500).json({ ok: false, error: "Server error" });
+  }
+});
+
+// POST /api/admin/leads/:id/dispatch — điều phối 1 lead cho 1 thợ:
+// gửi email (nếu thợ có email) + SMS (số thợ) với nội dung admin đã sửa.
+router.post("/leads/:id/dispatch", requireAuth, async (req: AuthRequest, res: Response) => {
+  try {
+    const { id } = req.params;
+    const b = (req.body ?? {}) as Record<string, unknown>;
+    const workerId = typeof b.workerId === "string" ? b.workerId : "";
+    const message = typeof b.message === "string" ? b.message.trim() : "";
+    const subject =
+      typeof b.subject === "string" && b.subject.trim()
+        ? b.subject.trim()
+        : "New job — Glenn's Plumbing";
+
+    if (!workerId) return res.status(400).json({ ok: false, error: "Please choose a worker" });
+    if (!message) return res.status(400).json({ ok: false, error: "Message is empty" });
+    if (message.length > 2000)
+      return res.status(400).json({ ok: false, error: "Message is too long" });
+
+    // Lead phải tồn tại (tránh điều phối lead rác / id sai).
+    const lead = await query("select id from leads where id = $1", [id]);
+    if (lead.rowCount === 0) return res.status(404).json({ ok: false, error: "Lead not found" });
+
+    const w = await query(
+      "select name, phone, email from workers where id = $1",
+      [workerId]
+    );
+    if (w.rowCount === 0) return res.status(404).json({ ok: false, error: "Worker not found" });
+    const worker = w.rows[0] as { name: string; phone: string; email: string | null };
+
+    // Gửi song song email + SMS; kênh nào thiếu cấu hình/lỗi trả false, không ném.
+    const [emailSent, smsSent] = await Promise.all([
+      worker.email ? sendPlainEmail(worker.email, subject, message) : Promise.resolve(false),
+      sendPlainSms(worker.phone, message),
+    ]);
+
+    // Ghi vết điều phối vào lịch sử lead (giữ nguyên trạng thái hiện tại).
+    await query(
+      `insert into lead_events ("leadId", "toStatus", note)
+       select $1, status, $2 from leads where id = $1`,
+      [id, `Dispatched to ${worker.name} (email:${emailSent} sms:${smsSent})`]
+    ).catch((err) => console.error("[dispatch] ghi lead_events lỗi:", err));
+
+    return res.json({
+      ok: true,
+      sent: { email: emailSent, sms: smsSent },
+      worker: { name: worker.name, hasEmail: !!worker.email },
+    });
+  } catch (err) {
+    console.error("[POST /api/admin/leads/:id/dispatch]", err);
     return res.status(500).json({ ok: false, error: "Server error" });
   }
 });

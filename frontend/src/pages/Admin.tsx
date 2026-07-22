@@ -547,6 +547,218 @@ function WorkersModal({ token, onClose }: { token: string; onClose: () => void }
   );
 }
 
+// ─── Dispatch Modal (điều phối lead cho thợ) ──────────────────────────────────
+function buildDispatchMessage(l: Lead): string {
+  const lines = [
+    "New job — Glenn's Plumbing",
+    "",
+    `Customer: ${l.name}`,
+    `Phone: ${l.phone}`,
+  ];
+  if (l.address) lines.push(`Address: ${l.address}`);
+  lines.push(`Service: ${l.service}`);
+  if (l.message) lines.push(`Notes: ${l.message}`);
+  lines.push("", "Please contact the customer to schedule.");
+  return lines.join("\n");
+}
+
+function DispatchModal({
+  token,
+  lead,
+  onClose,
+}: {
+  token: string;
+  lead: Lead;
+  onClose: () => void;
+}) {
+  const [workers, setWorkers]     = useState<Worker[]>([]);
+  const [loading, setLoading]     = useState(true);
+  const [workerId, setWorkerId]   = useState("");
+  const [subject, setSubject]     = useState("New job — Glenn's Plumbing");
+  const [message, setMessage]     = useState(() => buildDispatchMessage(lead));
+  const [sending, setSending]     = useState(false);
+  const [error, setError]         = useState("");
+  const [result, setResult]       = useState<
+    { email: boolean; sms: boolean; worker: string; hasEmail: boolean } | null
+  >(null);
+
+  const authHeaders = { Authorization: `Bearer ${token}`, "content-type": "application/json" };
+
+  useEffect(() => {
+    fetch(`${API}/api/admin/workers`, { headers: authHeaders })
+      .then((r) => r.json())
+      .then((d) => {
+        if (d.ok) {
+          setWorkers(d.workers);
+          if (d.workers.length > 0) setWorkerId(d.workers[0].id);
+        } else setError(d.error ?? "Could not load workers.");
+      })
+      .catch(() => setError("Could not connect to server."))
+      .finally(() => setLoading(false));
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const selectedWorker = workers.find((w) => w.id === workerId);
+
+  const send = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!workerId) { setError("Please choose a worker."); return; }
+    if (!message.trim()) { setError("Message is empty."); return; }
+    setSending(true);
+    setError("");
+    try {
+      const res  = await fetch(`${API}/api/admin/leads/${lead.id}/dispatch`, {
+        method: "POST",
+        headers: authHeaders,
+        body: JSON.stringify({ workerId, subject, message }),
+      });
+      const data = await res.json();
+      if (data.ok) {
+        setResult({
+          email: data.sent.email,
+          sms: data.sent.sms,
+          worker: data.worker.name,
+          hasEmail: data.worker.hasEmail,
+        });
+      } else setError(data.error ?? "Send failed.");
+    } catch {
+      setError("Could not connect to server.");
+    } finally {
+      setSending(false);
+    }
+  };
+
+  const inp =
+    "w-full rounded-xl border border-gray-200 px-3.5 py-2.5 text-[15px] text-gray-800 outline-none " +
+    "focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 transition-colors";
+  const Tick = ({ ok }: { ok: boolean }) => (
+    <span className={ok ? "text-emerald-600 font-bold" : "text-gray-400"}>{ok ? "✓ sent" : "✕ not sent"}</span>
+  );
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center px-4 py-8"
+      style={{ background: "rgba(0,0,0,0.45)" }}
+      onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
+    >
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg max-h-full flex flex-col">
+        <div className="flex items-center justify-between px-7 py-5 border-b border-gray-100">
+          <div>
+            <h2 className="font-bold text-[18px] text-[#1e3a5f]">Send to worker</h2>
+            <p className="text-[13px] text-gray-400 mt-0.5">
+              Lead: <span className="font-semibold text-gray-600">{lead.name}</span> · {lead.service}
+            </p>
+          </div>
+          <button
+            onClick={onClose}
+            className="text-gray-400 hover:text-gray-600 transition-colors text-[22px] leading-none"
+          >
+            ×
+          </button>
+        </div>
+
+        <div className="overflow-y-auto px-7 py-6">
+          {loading ? (
+            <div className="py-10 text-center text-[15px] text-gray-400">Loading workers…</div>
+          ) : result ? (
+            // ── Kết quả gửi ──
+            <div className="text-center py-6">
+              <div className="w-14 h-14 mx-auto rounded-2xl bg-emerald-50 flex items-center justify-center">
+                <svg className="w-7 h-7 text-emerald-500" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" />
+                </svg>
+              </div>
+              <h3 className="mt-4 font-bold text-[18px] text-[#1e3a5f]">Dispatched to {result.worker}</h3>
+              <div className="mt-3 inline-flex flex-col gap-1 text-[15px] text-gray-600">
+                <div>Email: {result.hasEmail ? <Tick ok={result.email} /> : <span className="text-gray-400">no email on file</span>}</div>
+                <div>SMS: <Tick ok={result.sms} /></div>
+              </div>
+              {!result.email && !result.sms && (
+                <p className="mt-4 text-[13px] text-amber-600 max-w-xs mx-auto">
+                  Nothing was actually sent — check that Twilio (SMS) and SMTP (email) are configured on the server.
+                </p>
+              )}
+              <div className="mt-6">
+                <button
+                  onClick={onClose}
+                  className="px-6 py-2.5 rounded-xl bg-[#2563eb] text-white font-bold text-[15px] hover:bg-[#1d4ed8] transition-colors"
+                >
+                  Done
+                </button>
+              </div>
+            </div>
+          ) : workers.length === 0 ? (
+            <div className="py-8 text-center">
+              <p className="text-[15px] text-gray-500">No workers yet.</p>
+              <p className="text-[13px] text-gray-400 mt-1">Add a worker first using the “Workers” button, then dispatch.</p>
+            </div>
+          ) : (
+            // ── Form điều phối ──
+            <form onSubmit={send} className="space-y-4">
+              <div>
+                <label className="block text-[13px] font-bold text-gray-700 mb-1.5">Worker</label>
+                <select value={workerId} onChange={(e) => setWorkerId(e.target.value)} className={inp}>
+                  {workers.map((w) => (
+                    <option key={w.id} value={w.id}>
+                      {w.name}{w.job ? ` — ${w.job}` : ""} · {w.phone}
+                    </option>
+                  ))}
+                </select>
+                {selectedWorker && !selectedWorker.email && (
+                  <p className="mt-1.5 text-[12.5px] text-amber-600">
+                    This worker has no email — only SMS will be sent.
+                  </p>
+                )}
+              </div>
+
+              <div>
+                <label className="block text-[13px] font-bold text-gray-700 mb-1.5">
+                  Email subject <span className="font-medium text-gray-400">(email only)</span>
+                </label>
+                <input value={subject} onChange={(e) => setSubject(e.target.value)} className={inp} />
+              </div>
+
+              <div>
+                <label className="block text-[13px] font-bold text-gray-700 mb-1.5">
+                  Message <span className="font-medium text-gray-400">(edit before sending)</span>
+                </label>
+                <textarea
+                  value={message}
+                  onChange={(e) => setMessage(e.target.value)}
+                  rows={9}
+                  className={inp + " resize-none font-mono text-[13.5px] leading-relaxed"}
+                />
+                <p className="mt-1 text-[12px] text-gray-400">Sent as the SMS body and the email body.</p>
+              </div>
+
+              {error && (
+                <div className="rounded-xl bg-red-50 border border-red-200 px-4 py-2.5 text-[14px] text-red-600 font-medium">
+                  {error}
+                </div>
+              )}
+
+              <div className="flex gap-2 pt-1">
+                <button
+                  type="button" onClick={onClose}
+                  className="flex-1 py-3 rounded-xl border border-gray-200 text-[15px] font-medium text-gray-600 hover:bg-gray-50 transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit" disabled={sending}
+                  className="flex-1 py-3 rounded-xl bg-[#2563eb] text-white font-bold text-[15px] hover:bg-[#1d4ed8] transition-colors disabled:opacity-60"
+                >
+                  {sending ? "Sending…" : "Send email + SMS"}
+                </button>
+              </div>
+            </form>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ─── Dashboard ────────────────────────────────────────────────────────────────
 function Dashboard({ token, onLogout }: { token: string; onLogout: () => void }) {
   const [leads, setLeads]         = useState<Lead[]>([]);
@@ -558,6 +770,7 @@ function Dashboard({ token, onLogout }: { token: string; onLogout: () => void })
   const [updating, setUpdating]   = useState<string | null>(null);
   const [showSettings, setShowSettings] = useState(false);
   const [showWorkers, setShowWorkers]   = useState(false);
+  const [dispatchLead, setDispatchLead] = useState<Lead | null>(null);
 
   const authHeaders = { Authorization: `Bearer ${token}`, "content-type": "application/json" };
 
@@ -653,6 +866,11 @@ function Dashboard({ token, onLogout }: { token: string; onLogout: () => void })
       {/* ── Workers Modal ── */}
       {showWorkers && (
         <WorkersModal token={token} onClose={() => setShowWorkers(false)} />
+      )}
+
+      {/* ── Dispatch Modal ── */}
+      {dispatchLead && (
+        <DispatchModal token={token} lead={dispatchLead} onClose={() => setDispatchLead(null)} />
       )}
 
       {/* ── Header ── */}
@@ -824,7 +1042,7 @@ function Dashboard({ token, onLogout }: { token: string; onLogout: () => void })
               <table className="w-full text-[15px]">
                 <thead>
                   <tr className="bg-slate-50 border-b border-gray-100">
-                    {["#", "Customer", "Contact", "Address", "Service", "Source", "Status", "Date"].map((h) => (
+                    {["#", "Customer", "Contact", "Address", "Service", "Source", "Status", "Date", ""].map((h) => (
                       <th key={h} className="text-left px-5 py-3.5 text-[13px] font-bold text-gray-400 uppercase tracking-wider whitespace-nowrap">
                         {h}
                       </th>
@@ -908,6 +1126,20 @@ function Dashboard({ token, onLogout }: { token: string; onLogout: () => void })
                       {/* Date */}
                       <td className="px-5 py-4 text-gray-400 text-[14px] whitespace-nowrap">
                         {fmt(lead.createdAt)}
+                      </td>
+
+                      {/* Dispatch to worker */}
+                      <td className="px-5 py-4 whitespace-nowrap">
+                        <button
+                          onClick={() => setDispatchLead(lead)}
+                          title="Send this lead to a worker (email + SMS)"
+                          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#1e3a5f] text-white text-[13px] font-semibold hover:bg-[#16304f] transition-colors"
+                        >
+                          <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M6 12L3.269 3.126A59.768 59.768 0 0121.485 12 59.77 59.77 0 013.27 20.876L5.999 12zm0 0h7.5" />
+                          </svg>
+                          Send
+                        </button>
                       </td>
                     </tr>
                   ))}

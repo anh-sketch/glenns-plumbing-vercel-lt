@@ -41,6 +41,28 @@ export interface LeadSmsData {
 
 const BIZ_PHONE = "(646) 963-2616";
 
+// Gửi SMS tới 1 số bất kỳ (dùng để điều phối lead → thợ).
+// Trả true nếu gửi thành công, false nếu chưa cấu hình Twilio / số sai / lỗi.
+export async function sendPlainSms(to: string, body: string): Promise<boolean> {
+  if (!client || !fromNumber) {
+    console.warn("[sms] Twilio chưa cấu hình — bỏ qua SMS điều phối.");
+    return false;
+  }
+  const dest = normalizePhone(to);
+  if (!dest) {
+    console.error(`[sms] Số thợ không hợp lệ: ${to}`);
+    return false;
+  }
+  try {
+    const msg = await client.messages.create({ body, from: fromNumber, to: dest });
+    console.log("[sms] Dispatch SMS sent:", msg.sid);
+    return true;
+  } catch (err) {
+    console.error("[sms] Dispatch SMS error:", err);
+    return false;
+  }
+}
+
 export async function sendLeadSms(lead: LeadSmsData): Promise<void> {
   if (!client || !fromNumber) {
     console.warn(

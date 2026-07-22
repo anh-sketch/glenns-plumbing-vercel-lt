@@ -40,6 +40,94 @@ router.patch("/leads/:id/status", requireAuth, async (req: AuthRequest, res: Res
   }
 });
 
+// ─── Workers (thợ) — CRUD ───────────────────────────────────────────────────
+// Thông tin thợ: name, phone (bắt buộc) · email, job (tùy chọn).
+
+// Chuẩn hóa + validate payload thợ. Trả { ok, data } hoặc { ok:false, error }.
+function parseWorker(body: unknown):
+  | { ok: true; data: { name: string; phone: string; email: string | null; job: string | null } }
+  | { ok: false; error: string } {
+  const b = (body ?? {}) as Record<string, unknown>;
+  const name = typeof b.name === "string" ? b.name.trim() : "";
+  const phone = typeof b.phone === "string" ? b.phone.trim() : "";
+  const email = typeof b.email === "string" ? b.email.trim() : "";
+  const job = typeof b.job === "string" ? b.job.trim() : "";
+  if (!name) return { ok: false, error: "Name is required" };
+  if (!phone) return { ok: false, error: "Phone is required" };
+  if (name.length > 120) return { ok: false, error: "Name is too long" };
+  if (phone.length > 40) return { ok: false, error: "Phone is too long" };
+  if (email && email.length > 254) return { ok: false, error: "Email is too long" };
+  if (job && job.length > 120) return { ok: false, error: "Job is too long" };
+  return { ok: true, data: { name, phone, email: email || null, job: job || null } };
+}
+
+// GET /api/admin/workers — danh sách thợ (mới nhất trước)
+router.get("/workers", requireAuth, async (_req: AuthRequest, res: Response) => {
+  try {
+    const result = await query(
+      `select id, name, phone, email, job, "createdAt"
+       from workers order by "createdAt" desc`
+    );
+    return res.json({ ok: true, workers: result.rows });
+  } catch (err) {
+    console.error("[GET /api/admin/workers]", err);
+    return res.status(500).json({ ok: false, error: "Server error" });
+  }
+});
+
+// POST /api/admin/workers — thêm thợ
+router.post("/workers", requireAuth, async (req: AuthRequest, res: Response) => {
+  try {
+    const parsed = parseWorker(req.body);
+    if (!parsed.ok) return res.status(400).json({ ok: false, error: parsed.error });
+    const { name, phone, email, job } = parsed.data;
+    const result = await query(
+      `insert into workers (name, phone, email, job)
+       values ($1, $2, $3, $4)
+       returning id, name, phone, email, job, "createdAt"`,
+      [name, phone, email, job]
+    );
+    return res.json({ ok: true, worker: result.rows[0] });
+  } catch (err) {
+    console.error("[POST /api/admin/workers]", err);
+    return res.status(500).json({ ok: false, error: "Server error" });
+  }
+});
+
+// PATCH /api/admin/workers/:id — sửa thợ
+router.patch("/workers/:id", requireAuth, async (req: AuthRequest, res: Response) => {
+  try {
+    const { id } = req.params;
+    const parsed = parseWorker(req.body);
+    if (!parsed.ok) return res.status(400).json({ ok: false, error: parsed.error });
+    const { name, phone, email, job } = parsed.data;
+    const result = await query(
+      `update workers set name = $1, phone = $2, email = $3, job = $4
+       where id = $5
+       returning id, name, phone, email, job, "createdAt"`,
+      [name, phone, email, job, id]
+    );
+    if (result.rowCount === 0) return res.status(404).json({ ok: false, error: "Worker not found" });
+    return res.json({ ok: true, worker: result.rows[0] });
+  } catch (err) {
+    console.error("[PATCH /api/admin/workers/:id]", err);
+    return res.status(500).json({ ok: false, error: "Server error" });
+  }
+});
+
+// DELETE /api/admin/workers/:id — xóa thợ
+router.delete("/workers/:id", requireAuth, async (req: AuthRequest, res: Response) => {
+  try {
+    const { id } = req.params;
+    const result = await query("delete from workers where id = $1", [id]);
+    if (result.rowCount === 0) return res.status(404).json({ ok: false, error: "Worker not found" });
+    return res.json({ ok: true });
+  } catch (err) {
+    console.error("[DELETE /api/admin/workers/:id]", err);
+    return res.status(500).json({ ok: false, error: "Server error" });
+  }
+});
+
 // GET /api/admin/settings — lấy cài đặt (hiện tại: email + sđt thông báo)
 router.get("/settings", requireAuth, async (_req: AuthRequest, res: Response) => {
   try {

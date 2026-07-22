@@ -74,6 +74,11 @@ const GearIcon = () => (
     <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
   </svg>
 );
+const UsersIcon = () => (
+  <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+    <path strokeLinecap="round" strokeLinejoin="round" d="M15 19.128a9.38 9.38 0 002.625.372 9.337 9.337 0 004.121-.952 4.125 4.125 0 00-7.533-2.493M15 19.128v-.003c0-1.113-.285-2.16-.786-3.07M15 19.128v.106A12.318 12.318 0 018.624 21c-2.331 0-4.512-.645-6.374-1.766l-.001-.109a6.375 6.375 0 0111.964-3.07M12 6.375a3.375 3.375 0 11-6.75 0 3.375 3.375 0 016.75 0zm8.25 2.25a2.625 2.625 0 11-5.25 0 2.625 2.625 0 015.25 0z" />
+  </svg>
+);
 const MailIcon = () => (
   <svg className="w-5 h-5 text-blue-500" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
     <path strokeLinecap="round" strokeLinejoin="round" d="M21.75 6.75v10.5a2.25 2.25 0 01-2.25 2.25h-15a2.25 2.25 0 01-2.25-2.25V6.75m19.5 0A2.25 2.25 0 0019.5 4.5h-15a2.25 2.25 0 00-2.25 2.25m19.5 0v.243a2.25 2.25 0 01-1.07 1.916l-7.5 4.615a2.25 2.25 0 01-2.36 0L3.32 8.91a2.25 2.25 0 01-1.07-1.916V6.75" />
@@ -317,6 +322,231 @@ function SettingsModal({
   );
 }
 
+// ─── Workers Modal (quản lý thợ) ──────────────────────────────────────────────
+interface Worker {
+  id: string;
+  name: string;
+  phone: string;
+  email: string | null;
+  job: string | null;
+  createdAt: string;
+}
+
+const EMPTY_WORKER = { name: "", phone: "", email: "", job: "" };
+
+function WorkersModal({ token, onClose }: { token: string; onClose: () => void }) {
+  const [workers, setWorkers] = useState<Worker[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError]     = useState("");
+  const [busy, setBusy]       = useState(false);
+
+  // Form dùng chung cho cả thêm mới lẫn sửa. editingId = null => đang thêm mới.
+  const [form, setForm]           = useState(EMPTY_WORKER);
+  const [editingId, setEditingId] = useState<string | null>(null);
+
+  const authHeaders = { Authorization: `Bearer ${token}`, "content-type": "application/json" };
+
+  const load = useCallback(async () => {
+    setLoading(true);
+    setError("");
+    try {
+      const res  = await fetch(`${API}/api/admin/workers`, { headers: authHeaders });
+      const data = await res.json();
+      if (data.ok) setWorkers(data.workers);
+      else setError(data.error ?? "Could not load workers.");
+    } catch {
+      setError("Could not connect to server.");
+    } finally {
+      setLoading(false);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [token]);
+
+  useEffect(() => { load(); }, [load]);
+
+  const resetForm = () => { setForm(EMPTY_WORKER); setEditingId(null); };
+
+  const startEdit = (w: Worker) => {
+    setEditingId(w.id);
+    setForm({ name: w.name, phone: w.phone, email: w.email ?? "", job: w.job ?? "" });
+    setError("");
+  };
+
+  const submit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!form.name.trim() || !form.phone.trim()) {
+      setError("Name and phone are required.");
+      return;
+    }
+    setBusy(true);
+    setError("");
+    try {
+      const url = editingId
+        ? `${API}/api/admin/workers/${editingId}`
+        : `${API}/api/admin/workers`;
+      const res  = await fetch(url, {
+        method: editingId ? "PATCH" : "POST",
+        headers: authHeaders,
+        body: JSON.stringify(form),
+      });
+      const data = await res.json();
+      if (data.ok) { resetForm(); await load(); }
+      else setError(data.error ?? "Save failed.");
+    } catch {
+      setError("Could not connect to server.");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const remove = async (w: Worker) => {
+    if (!window.confirm(`Delete worker "${w.name}"? This cannot be undone.`)) return;
+    setBusy(true);
+    setError("");
+    try {
+      const res  = await fetch(`${API}/api/admin/workers/${w.id}`, {
+        method: "DELETE", headers: authHeaders,
+      });
+      const data = await res.json();
+      if (data.ok) {
+        if (editingId === w.id) resetForm();
+        await load();
+      } else setError(data.error ?? "Delete failed.");
+    } catch {
+      setError("Could not connect to server.");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const inp =
+    "w-full rounded-xl border border-gray-200 px-3.5 py-2.5 text-[15px] text-gray-800 outline-none " +
+    "focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 transition-colors";
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center px-4 py-8"
+      style={{ background: "rgba(0,0,0,0.45)" }}
+      onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
+    >
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-3xl max-h-full flex flex-col">
+        {/* Header */}
+        <div className="flex items-center justify-between px-8 py-6 border-b border-gray-100">
+          <h2 className="font-bold text-[18px] text-[#1e3a5f]">Workers</h2>
+          <button
+            onClick={onClose}
+            className="text-gray-400 hover:text-gray-600 transition-colors text-[22px] leading-none"
+          >
+            ×
+          </button>
+        </div>
+
+        <div className="overflow-y-auto px-8 py-6 space-y-6">
+          {/* Add / Edit form */}
+          <form onSubmit={submit} className="bg-slate-50 rounded-2xl p-5 border border-gray-100">
+            <div className="text-[13px] font-bold uppercase tracking-wide text-gray-400 mb-3">
+              {editingId ? "Edit worker" : "Add a worker"}
+            </div>
+            <div className="grid sm:grid-cols-2 gap-3">
+              <input
+                value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })}
+                placeholder="Name *" className={inp}
+              />
+              <input
+                value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })}
+                placeholder="Phone *" type="tel" className={inp}
+              />
+              <input
+                value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })}
+                placeholder="Email (optional)" type="email" className={inp}
+              />
+              <input
+                value={form.job} onChange={(e) => setForm({ ...form, job: e.target.value })}
+                placeholder="Job / trade (optional)" className={inp}
+              />
+            </div>
+            {error && (
+              <div className="mt-3 rounded-xl bg-red-50 border border-red-200 px-4 py-2.5 text-[14px] text-red-600 font-medium">
+                {error}
+              </div>
+            )}
+            <div className="mt-4 flex gap-2">
+              <button
+                type="submit" disabled={busy}
+                className="px-5 py-2.5 rounded-xl bg-[#2563eb] text-white font-bold text-[15px] hover:bg-[#1d4ed8] transition-colors disabled:opacity-60"
+              >
+                {busy ? "Saving…" : editingId ? "Save changes" : "Add worker"}
+              </button>
+              {editingId && (
+                <button
+                  type="button" onClick={resetForm}
+                  className="px-5 py-2.5 rounded-xl border border-gray-200 text-[15px] font-medium text-gray-600 hover:bg-gray-50 transition-colors"
+                >
+                  Cancel
+                </button>
+              )}
+            </div>
+          </form>
+
+          {/* List */}
+          {loading ? (
+            <div className="py-10 text-center text-[15px] text-gray-400">Loading workers…</div>
+          ) : workers.length === 0 ? (
+            <div className="py-10 text-center text-[15px] text-gray-400">
+              No workers yet. Add your first one above.
+            </div>
+          ) : (
+            <div className="overflow-x-auto border border-gray-100 rounded-2xl">
+              <table className="w-full text-[15px]">
+                <thead>
+                  <tr className="bg-slate-50 border-b border-gray-100">
+                    {["Name", "Phone", "Email", "Job", ""].map((h, i) => (
+                      <th key={i} className="text-left px-4 py-3 text-[12px] font-bold text-gray-400 uppercase tracking-wider whitespace-nowrap">
+                        {h}
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-50">
+                  {workers.map((w) => (
+                    <tr key={w.id} className="hover:bg-slate-50/70 transition-colors">
+                      <td className="px-4 py-3 font-semibold text-[#1e3a5f] whitespace-nowrap">{w.name}</td>
+                      <td className="px-4 py-3 whitespace-nowrap">
+                        <a href={`tel:${w.phone}`} className="text-[#2563eb] hover:underline">{w.phone}</a>
+                      </td>
+                      <td className="px-4 py-3 text-gray-500 max-w-[180px] truncate" title={w.email ?? ""}>
+                        {w.email || <span className="text-gray-300">—</span>}
+                      </td>
+                      <td className="px-4 py-3 text-gray-500 whitespace-nowrap">
+                        {w.job || <span className="text-gray-300">—</span>}
+                      </td>
+                      <td className="px-4 py-3 whitespace-nowrap text-right">
+                        <button
+                          onClick={() => startEdit(w)}
+                          className="text-[14px] font-semibold text-gray-500 hover:text-[#2563eb] transition-colors mr-3"
+                        >
+                          Edit
+                        </button>
+                        <button
+                          onClick={() => remove(w)}
+                          disabled={busy}
+                          className="text-[14px] font-semibold text-gray-400 hover:text-red-500 transition-colors disabled:opacity-50"
+                        >
+                          Delete
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ─── Dashboard ────────────────────────────────────────────────────────────────
 function Dashboard({ token, onLogout }: { token: string; onLogout: () => void }) {
   const [leads, setLeads]         = useState<Lead[]>([]);
@@ -327,6 +557,7 @@ function Dashboard({ token, onLogout }: { token: string; onLogout: () => void })
   const [toDate, setToDate]       = useState("");
   const [updating, setUpdating]   = useState<string | null>(null);
   const [showSettings, setShowSettings] = useState(false);
+  const [showWorkers, setShowWorkers]   = useState(false);
 
   const authHeaders = { Authorization: `Bearer ${token}`, "content-type": "application/json" };
 
@@ -419,6 +650,11 @@ function Dashboard({ token, onLogout }: { token: string; onLogout: () => void })
         <SettingsModal token={token} onClose={() => setShowSettings(false)} />
       )}
 
+      {/* ── Workers Modal ── */}
+      {showWorkers && (
+        <WorkersModal token={token} onClose={() => setShowWorkers(false)} />
+      )}
+
       {/* ── Header ── */}
       <header className="bg-[#1e3a5f] text-white px-6 py-4 flex items-center justify-between shadow-lg sticky top-0 z-30">
         <div className="flex items-center gap-3">
@@ -431,6 +667,12 @@ function Dashboard({ token, onLogout }: { token: string; onLogout: () => void })
           </div>
         </div>
         <div className="flex items-center gap-2">
+          <button
+            onClick={() => setShowWorkers(true)}
+            className="flex items-center gap-2 px-4 py-2 rounded-xl bg-white/10 hover:bg-white/20 text-[15px] font-medium transition-colors"
+          >
+            <UsersIcon /> Workers
+          </button>
           <button
             onClick={() => setShowSettings(true)}
             className="flex items-center gap-2 px-4 py-2 rounded-xl bg-white/10 hover:bg-white/20 text-[15px] font-medium transition-colors"

@@ -29,7 +29,7 @@ const leadSchema = z.object({
   message: z.string().trim().max(2000).optional(),
   source: z
     .enum(["home", "pricing"])
-    .or(z.string().regex(/^service:[a-z-]+$/))
+    .or(z.string().regex(/^service:[a-z0-9-]+$/))
     .default("home"),
   // SMS opt-in (Twilio A2P / TCPA): the form checkbox is unchecked by default
   // and required — enforced here too so consent is never assumed for API calls.

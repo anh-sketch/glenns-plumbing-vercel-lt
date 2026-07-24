@@ -244,13 +244,17 @@ export function initAutoClickTracking(): void {
         const label =
           anchor.getAttribute("data-track-name") ||
           (anchor.textContent || "").trim().slice(0, 80);
+        // Landing pages outside /services/:slug (e.g. /24-hour-plumber-nyc)
+        // tag their CTAs with data-service-slug so track() promotes it to the
+        // service_slug column; absent everywhere else, so behavior is unchanged.
+        const slug = anchor.getAttribute("data-service-slug");
 
         if (/^tel:/i.test(href)) {
-          track("call_click", { href: href.slice(0, 64), name: label });
+          track("call_click", { href: href.slice(0, 64), name: label, ...(slug ? { service_slug: slug } : {}) });
           return;
         }
         if (/^sms:/i.test(href)) {
-          track("sms_click", { href: href.slice(0, 64), name: label });
+          track("sms_click", { href: href.slice(0, 64), name: label, ...(slug ? { service_slug: slug } : {}) });
           return;
         }
         if (/^https?:\/\//i.test(href)) {

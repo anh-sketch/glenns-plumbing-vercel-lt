@@ -14,62 +14,56 @@ import { BIZ } from "@/lib/biz";
 import { FORM_SELECT, HOME_SERVICES } from "@/lib/data";
 import { track, trackCtaClick } from "@/lib/track";
 
-// Analytics slug for this landing page. Not a /services/:slug route — the slug
-// is passed explicitly so funnel queries can join view → cta → call → lead.
-const SLUG = "24-hour-plumber-nyc";
+// Analytics slug for this borough spoke page (hub: /24-hour-plumber-nyc).
+const SLUG = "emergency-plumber-brooklyn";
 
-const PAGE_URL = "https://glennph.com/24-hour-plumber-nyc";
+const PAGE_URL = "https://glennph.com/emergency-plumber-brooklyn";
 
 const META_DESCRIPTION =
-  `Need a 24 hour plumber in NYC? Licensed Master Plumber (NYC Lic# ${BIZ.licenseNo}) on call now ` +
-  `for burst pipes, sewer backups & no-heat emergencies in Manhattan, Queens, the Bronx & Brooklyn. ` +
+  `Emergency plumber in Brooklyn — a licensed NYC Master Plumber (Lic# ${BIZ.licenseNo}) answers 24/7 ` +
+  `for burst pipes, sewer backups & no-heat calls in Park Slope, Williamsburg, Bed-Stuy & across Brooklyn. ` +
   `Upfront flat-rate pricing, 12-month workmanship guarantee. Call ${BIZ.phone}.`;
 
 const EMERGENCIES = [
-  { icon: "droplets",       title: "Burst & leaking pipes",       desc: "Water where it shouldn't be — behind walls, under floors, through ceilings. We shut it down and repair it on the spot." },
-  { icon: "waves",          title: "Sewer & drain backups",       desc: "Sewage backing into a tub or basement is a health hazard. We snake and camera the line the same visit." },
-  { icon: "flame",          title: "No hot water",                desc: "A failed water heater at 11pm doesn't wait for business hours. We diagnose, repair, or replace — fast." },
-  { icon: "snowflake",      title: "No heat / boiler down",       desc: "A cold apartment in a NYC winter is an emergency, period. Boiler and heating failures handled around the clock." },
+  { icon: "droplets",       title: "Burst & leaking pipes",         desc: "A split supply line in a brownstone soaks two floors fast. We shut the water down and repair it on the spot." },
+  { icon: "waves",          title: "Sewer & drain backups",         desc: "Brooklyn's older clay and cast-iron mains clog and back up into basements. We snake and camera the line the same visit." },
+  { icon: "flame",          title: "No hot water",                  desc: "A dead water heater in a multifamily can't wait for Monday. We diagnose, repair, or replace — fast." },
+  { icon: "snowflake",      title: "No heat / boiler down",         desc: "Radiators cold in January? Boiler and heating failures in Brooklyn homes are handled around the clock." },
   { icon: "shower-head",    title: "Overflowing toilet or fixture", desc: "When plunging won't stop it, the problem is deeper in the line. We stop the overflow and clear the cause." },
-  { icon: "alert-triangle", title: "Flooding & sump-pump failure", desc: "A dead sump pump during a storm floods a basement in hours. We pump down, replace, and test before we leave." },
+  { icon: "alert-triangle", title: "Flooding & sump-pump failure",  desc: "Basement apartments flood in hours when a sump pump dies mid-storm. We pump down, replace, and test before we leave." },
 ];
 
-// Borough coverage is copy only — borough landing pages don't exist yet, so
-// there is intentionally nothing to link to here (no 404s).
-const BOROUGH_NOTES: { name: string; note: string; href?: string; slug?: string }[] = [
-  { name: "Manhattan", note: "Pre-war walk-ups, brownstones, and high-rise apartments — from the Upper West Side to the Financial District." },
-  { name: "Queens",    note: "Astoria two-families, Flushing homes, and everything along the 7 line. Same-day trucks across the borough." },
-  { name: "Bronx",     note: "From Riverdale co-ops to South Bronx multifamilies — boiler and heating emergencies are our winter specialty here." },
-  { name: "Brooklyn",  note: "Park Slope brownstones, Williamsburg condos, and basement apartments borough-wide — flooding and drain calls handled 24/7.",
-    href: "/emergency-plumber-brooklyn", slug: "emergency-plumber-brooklyn" },
+// Coverage is copy only — neighborhood pages don't exist, so nothing links.
+const NEIGHBORHOODS = [
+  "Park Slope", "Williamsburg", "Brooklyn Heights", "Bed-Stuy", "Greenpoint",
+  "Bushwick", "Crown Heights", "Fort Greene", "Flatbush", "Bay Ridge",
+  "Sunset Park", "Dumbo",
 ];
 
 const FAQ_ITEMS = [
   {
-    q: "Do you really answer the phone 24 hours a day?",
-    a: `Yes. A real person answers ${BIZ.phone} around the clock — nights, weekends, and holidays. For a burst pipe, sewer backup, or no-heat night we dispatch a licensed plumber right away instead of booking you for "the next business day."`,
+    q: "Do you handle emergency plumbing calls anywhere in Brooklyn?",
+    a: "Yes — from Greenpoint down to Bay Ridge, including Park Slope, Williamsburg, Bed-Stuy, Bushwick, Crown Heights, Flatbush, and Sunset Park. If you're in Brooklyn and water, gas, or heat is the problem, we take the call 24/7.",
   },
   {
-    q: "How fast can an emergency plumber reach me in NYC?",
-    a: "We serve Manhattan, Queens, the Bronx, and Brooklyn with same-day and immediate dispatch. For true emergencies a truck rolls as soon as you call; for everything else we give you an arrival window on the phone, not a vague promise.",
+    q: "How fast can you get to me in Brooklyn?",
+    a: `For true emergencies a truck rolls as soon as you call ${BIZ.phone} — nights, weekends, and holidays included. For everything else we give you a same-day arrival window on the phone, not a vague promise.`,
   },
   {
-    q: "How much does a 24-hour plumber cost in NYC?",
+    q: "Do you work on brownstones and older Brooklyn buildings?",
+    a: "Every week. Pre-war rowhouses, brownstones with original cast-iron stacks, converted multifamilies, and basement apartments are our bread and butter — all repairs done to NYC code by a licensed master plumber.",
+  },
+  {
+    q: "How much does an emergency plumber cost in Brooklyn?",
     a: "You approve an upfront flat-rate price before any work begins — no overtime hourly meter, no surprise add-ons. Most repairs start from $350, drain clearing from $375, and the price we quote is the price you pay.",
   },
   {
-    q: "Which plumbing emergencies do you handle at night?",
-    a: "Burst and leaking pipes, sewer and drain backups, overflowing toilets, no hot water, boiler and heating failures, and sump-pump or flooding emergencies. If water, gas, or heat is the problem, we handle it — any hour.",
-  },
-  {
-    q: "Are you licensed, and is emergency work guaranteed?",
-    a: `Every job runs under ${BIZ.owner}, NYC Licensed Master Plumber Lic# ${BIZ.licenseNo} — bonded and insured. All work, including emergency calls, is backed by our 12-month workmanship guarantee in writing.`,
+    q: "Are you licensed and insured for work in Brooklyn?",
+    a: `Yes. Every job runs under ${BIZ.owner}, NYC Licensed Master Plumber Lic# ${BIZ.licenseNo} — bonded and insured citywide. All work, including emergency calls, is backed by our 12-month workmanship guarantee in writing.`,
   },
 ];
 
-// Page-level structured data. The site-wide Plumber node (@id .../#business)
-// ships in index.html on every route, so nodes here reference it instead of
-// redefining it.
+// References the site-wide Plumber node from index.html instead of redefining it.
 const JSON_LD = {
   "@context": "https://schema.org",
   "@graph": [
@@ -77,7 +71,7 @@ const JSON_LD = {
       "@type": "WebPage",
       "@id": `${PAGE_URL}#webpage`,
       url: PAGE_URL,
-      name: "24 Hour Plumber NYC — Emergency Plumber On Call Now",
+      name: "Emergency Plumber Brooklyn — 24/7 Same-Day Service",
       description: META_DESCRIPTION,
       inLanguage: "en-US",
       about: { "@id": "https://glennph.com/#business" },
@@ -85,17 +79,17 @@ const JSON_LD = {
     {
       "@type": ["Service", "EmergencyService"],
       "@id": `${PAGE_URL}#service`,
-      name: "24-Hour Emergency Plumbing",
+      name: "Emergency Plumbing in Brooklyn",
       serviceType: "Emergency plumber",
       provider: { "@id": "https://glennph.com/#business" },
-      areaServed: BOROUGH_NOTES.map((b) => ({ "@type": "City", name: b.name })),
+      areaServed: { "@type": "City", name: "Brooklyn" },
       availableChannel: {
         "@type": "ServiceChannel",
         servicePhone: {
           "@type": "ContactPoint",
           telephone: "+16469632616",
           contactType: "emergency",
-          areaServed: "New York City",
+          areaServed: "Brooklyn",
           availableLanguage: "en",
           hoursAvailable: {
             "@type": "OpeningHoursSpecification",
@@ -118,16 +112,14 @@ const JSON_LD = {
   ],
 };
 
-export default function EmergencyPlumberNyc() {
+export default function EmergencyPlumberBrooklyn() {
   useEffect(() => {
     window.scrollTo(0, 0);
-    document.title = "24 Hour Plumber NYC — Emergency Plumber On Call Now | Glenn's Plumbing";
+    document.title = "Emergency Plumber Brooklyn — 24/7 Same-Day Service | Glenn's Plumbing";
     document
       .querySelector('meta[name="description"]')
       ?.setAttribute("content", META_DESCRIPTION);
-    // trackRoute fires the generic page_view; this adds the service-funnel view
-    // with the slug promoted to the service_slug column.
-    track("service_page_view", { service_slug: SLUG, name: "24hr_landing" });
+    track("service_page_view", { service_slug: SLUG, name: "brooklyn_landing" });
   }, []);
 
   return (
@@ -139,7 +131,7 @@ export default function EmergencyPlumberNyc() {
       />
       <Header variant="service" />
       <main>
-        {/* Hero — call CTA primary (reversed vs homepage: emergency intent = phone first) */}
+        {/* Hero — call CTA primary, mirroring the /24-hour-plumber-nyc hub */}
         <section id="top" className="relative overflow-hidden bg-navy-deep">
           <div
             className="absolute inset-0 hero-photo"
@@ -165,24 +157,24 @@ export default function EmergencyPlumberNyc() {
                     <span className="w-2 h-2 rounded-full bg-emerald-400 inline-block"></span>
                   </span>
                   <span className="text-[13px] font-bold text-white/90">
-                    Emergency line open now — a master plumber answers 24/7
+                    Brooklyn emergency line open now — answered 24/7
                   </span>
                 </div>
               </Reveal>
 
               <Reveal delay={80}>
                 <h1 className="mt-6 font-display font-extrabold text-white leading-[1.05] text-[38px] sm:text-[50px] lg:text-[58px]">
-                  24-Hour Emergency Plumber in NYC.
+                  Emergency Plumber in Brooklyn.
                   <br className="hidden sm:block" />
-                  <span className="text-amber-soft">At your door fast</span> — day or night.
+                  <span className="text-amber-soft">Same-day service</span> — day or night.
                 </h1>
               </Reveal>
 
               <Reveal delay={160}>
                 <p className="mt-5 text-[18px] lg:text-[19px] text-white/75 leading-relaxed max-w-xl">
-                  Burst pipe, sewer backup, no heat at 2am — we answer, dispatch, and fix it with
-                  upfront flat-rate pricing. Serving {BIZ.areas[0]}, {BIZ.areas[1]}, the{" "}
-                  {BIZ.areas[2]} &amp; {BIZ.areas[3]}.
+                  Burst pipe in a Park Slope brownstone, sewer backup in Bed-Stuy, no heat in
+                  Williamsburg — we answer, dispatch, and fix it with upfront flat-rate pricing,
+                  borough-wide.
                 </p>
               </Reveal>
 
@@ -190,7 +182,7 @@ export default function EmergencyPlumberNyc() {
                 <div className="mt-8 flex flex-col sm:flex-row gap-3.5">
                   <a
                     href={BIZ.phoneHref}
-                    data-track-name="24hr_hero_call"
+                    data-track-name="bk_hero_call"
                     data-service-slug={SLUG}
                     className="btn sheen inline-flex items-center justify-center gap-2.5 px-7 py-4 rounded-2xl bg-blue text-white font-bold text-[17px] shadow-lift hover:bg-blue-deep"
                   >
@@ -199,7 +191,7 @@ export default function EmergencyPlumberNyc() {
                   </a>
                   <a
                     href="#book"
-                    onClick={() => trackCtaClick("24hr_hero_quote", { service_slug: SLUG })}
+                    onClick={() => trackCtaClick("bk_hero_quote", { service_slug: SLUG })}
                     className="btn inline-flex items-center justify-center gap-2.5 px-7 py-4 rounded-2xl bg-white text-navy font-bold text-[17px] shadow-soft hover:bg-white/90"
                   >
                     Get a Free Quote
@@ -235,7 +227,7 @@ export default function EmergencyPlumberNyc() {
           </div>
         </section>
 
-        {/* What counts as an emergency */}
+        {/* Brooklyn emergencies */}
         <section className="bg-white">
           <div className="mx-auto max-w-7xl px-5 sm:px-8 py-16 lg:py-24">
             <Reveal className="max-w-2xl">
@@ -243,11 +235,11 @@ export default function EmergencyPlumberNyc() {
                 <span className="w-6 h-px bg-blue"></span> Don't wait until morning
               </div>
               <h2 className="mt-4 font-display font-extrabold text-navy text-[30px] sm:text-[40px] leading-[1.08]">
-                What counts as a plumbing emergency?
+                Brooklyn plumbing emergencies we handle
               </h2>
               <p className="mt-4 text-[17px] text-muted leading-relaxed">
-                If it's one of these, call now — every hour of waiting makes the damage (and the
-                repair) bigger.
+                Older housing stock means older pipes. If it's one of these, call now — every hour
+                of waiting makes the damage (and the repair) bigger.
               </p>
             </Reveal>
             <div className="mt-12 grid sm:grid-cols-2 lg:grid-cols-3 gap-5">
@@ -270,7 +262,7 @@ export default function EmergencyPlumberNyc() {
                 Not sure it's an emergency?{" "}
                 <a
                   href={BIZ.phoneHref}
-                  data-track-name="24hr_body_call"
+                  data-track-name="bk_body_call"
                   data-service-slug={SLUG}
                   className="font-bold text-blue"
                 >
@@ -284,7 +276,7 @@ export default function EmergencyPlumberNyc() {
 
         <Process />
 
-        {/* Emergency services — links to the six live service pages */}
+        {/* Services — links to the six live service pages */}
         <section className="bg-white">
           <div className="mx-auto max-w-7xl px-5 sm:px-8 py-16 lg:py-24">
             <Reveal className="max-w-2xl">
@@ -292,7 +284,7 @@ export default function EmergencyPlumberNyc() {
                 <span className="w-6 h-px bg-blue"></span> Handled around the clock
               </div>
               <h2 className="mt-4 font-display font-extrabold text-navy text-[30px] sm:text-[40px] leading-[1.08]">
-                Emergency plumbing services, 24/7
+                Emergency plumbing services across Brooklyn
               </h2>
               <p className="mt-4 text-[17px] text-muted leading-relaxed">
                 Every service below runs on the same promise: a licensed master plumber, an upfront
@@ -304,7 +296,7 @@ export default function EmergencyPlumberNyc() {
                 <Reveal key={s.slug} delay={(i % 3) * 80}>
                   <Link
                     to={`/services/${s.slug}`}
-                    onClick={() => trackCtaClick("24hr_service_card", { service_slug: SLUG, target: s.slug })}
+                    onClick={() => trackCtaClick("bk_service_card", { service_slug: SLUG, target: s.slug })}
                     className="lift group relative flex flex-col h-full bg-white rounded-2xl border border-line p-7 shadow-soft hover:shadow-lift hover:border-transparent"
                   >
                     <span className="absolute inset-x-0 top-0 h-1 rounded-t-2xl scale-x-0 group-hover:scale-x-100 transition-transform origin-left bg-blue"></span>
@@ -337,7 +329,7 @@ export default function EmergencyPlumberNyc() {
           </div>
         </section>
 
-        {/* Borough coverage — text only, no borough pages exist yet */}
+        {/* Neighborhood coverage — text only, no neighborhood pages exist */}
         <section className="bg-white border-t border-line">
           <div className="mx-auto max-w-7xl px-5 sm:px-8 py-16 lg:py-24">
             <Reveal className="max-w-2xl">
@@ -345,58 +337,57 @@ export default function EmergencyPlumberNyc() {
                 <span className="w-6 h-px bg-blue"></span> Where we work
               </div>
               <h2 className="mt-4 font-display font-extrabold text-navy text-[30px] sm:text-[40px] leading-[1.08]">
-                Emergency coverage across four boroughs
+                Covering Brooklyn, neighborhood by neighborhood
               </h2>
+              <p className="mt-4 text-[17px] text-muted leading-relaxed">
+                From brownstone blocks to new waterfront towers, our trucks run through Brooklyn
+                every day:
+              </p>
             </Reveal>
-            <div className="mt-10 grid sm:grid-cols-2 gap-x-10 gap-y-8">
-              {BOROUGH_NOTES.map((b, i) => (
-                <Reveal key={b.name} delay={(i % 2) * 70}>
-                  <div className="flex items-start gap-3.5">
-                    <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-blue/10 text-blue">
-                      <Icon name="map-pin" className="w-[22px] h-[22px]" />
-                    </span>
-                    <div>
-                      <h3 className="font-display font-bold text-navy text-[18px]">{b.name}</h3>
-                      <p className="mt-1 text-[15px] text-muted leading-relaxed">{b.note}</p>
-                      {b.href && (
-                        <Link
-                          to={b.href}
-                          onClick={() =>
-                            trackCtaClick("24hr_borough_link", { service_slug: SLUG, target: b.slug })
-                          }
-                          className="mt-2 inline-flex items-center gap-1.5 text-[14px] font-bold text-blue"
-                        >
-                          Emergency plumber in {b.name}
-                          <Icon name="arrow-right" className="w-4 h-4" />
-                        </Link>
-                      )}
-                    </div>
-                  </div>
-                </Reveal>
-              ))}
-            </div>
-            <Reveal delay={120}>
-              <p className="mt-10 text-[14.5px] text-muted">
-                Not sure you're in range?{" "}
+            <Reveal delay={80}>
+              <div className="mt-8 flex flex-wrap gap-2.5">
+                {NEIGHBORHOODS.map((n) => (
+                  <span
+                    key={n}
+                    className="inline-flex items-center gap-1.5 rounded-full border border-line bg-white px-4 py-2 text-[14px] font-semibold text-navy shadow-soft"
+                  >
+                    <Icon name="map-pin" className="w-4 h-4 text-blue" />
+                    {n}
+                  </span>
+                ))}
+              </div>
+            </Reveal>
+            <Reveal delay={140}>
+              <p className="mt-8 text-[14.5px] text-muted">
+                Don't see your neighborhood?{" "}
                 <a
                   href={BIZ.phoneHref}
-                  data-track-name="24hr_body_call"
+                  data-track-name="bk_body_call"
                   data-service-slug={SLUG}
                   className="font-bold text-blue"
                 >
                   Call {BIZ.phone}
                 </a>{" "}
-                and we'll confirm in seconds.
+                — if you're in Brooklyn, you're covered. We also serve the rest of the city; see
+                our{" "}
+                <Link
+                  to="/24-hour-plumber-nyc"
+                  onClick={() => trackCtaClick("bk_hub_link", { service_slug: SLUG, target: "24-hour-plumber-nyc" })}
+                  className="font-bold text-blue"
+                >
+                  24-hour plumber NYC
+                </Link>{" "}
+                page.
               </p>
             </Reveal>
           </div>
         </section>
 
-        <Faq heading="24-hour plumber NYC — your questions, answered" items={FAQ_ITEMS} />
+        <Faq heading="Emergency plumber Brooklyn — your questions, answered" items={FAQ_ITEMS} />
 
         <BookForm
           variant="service"
-          heading="Book your emergency plumber"
+          heading="Book your Brooklyn emergency plumber"
           presetService={FORM_SELECT.emergency}
           source={`service:${SLUG}`}
         />

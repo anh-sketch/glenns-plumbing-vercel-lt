@@ -4,6 +4,7 @@ import Home from "./pages/Home";
 import Pricing from "./pages/Pricing";
 import ServiceDetail from "./pages/ServiceDetail";
 import EmergencyPlumberNyc from "./pages/EmergencyPlumberNyc";
+import EmergencyPlumberBrooklyn from "./pages/EmergencyPlumberBrooklyn";
 import Admin from "./pages/Admin";
 import Privacy from "./pages/Privacy";
 import Terms from "./pages/Terms";
@@ -46,6 +47,7 @@ export default function App() {
         <Route path="/pricing" element={<Pricing />} />
         <Route path="/services/:slug" element={<ServiceDetail />} />
         <Route path="/24-hour-plumber-nyc" element={<EmergencyPlumberNyc />} />
+        <Route path="/emergency-plumber-brooklyn" element={<EmergencyPlumberBrooklyn />} />
         <Route path="/privacy" element={<Privacy />} />
         <Route path="/terms" element={<Terms />} />
         <Route path="/admin" element={<Admin />} />
